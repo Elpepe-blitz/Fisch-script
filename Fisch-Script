@@ -1,219 +1,82 @@
+loadstring([[
 -- =============================================
--- Fisch Auto Farm + GUI Mobile Friendly
--- Creado por Elpepe
+-- FISCH HUB + ANTI DETECTION + INSTA CATCH
+-- Creado el 26 Marzo 2026
+-- Anti-Detection
+-- PC (Delta, Solara, Wave, etc.)
 -- =============================================
 
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local VirtualInputManager = game:GetService("VirtualInputManager")
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local TweenService = game:GetService("TweenService")
+local ProximityPromptService = game:GetService("ProximityPromptService")
 
 local player = Players.LocalPlayer
+local playerGui = player:WaitForChild("PlayerGui")
 local character = player.Character or player.CharacterAdded:Wait()
 
--- ==================== GUI SIMPLE PARA MÓVIL ====================
+-- ==================== GUI ====================
 local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "FischFarmGUI"
+ScreenGui.Name = "FischHub"
 ScreenGui.ResetOnSpawn = false
 ScreenGui.Parent = game:GetService("CoreGui")
 
--- Botón flotante para abrir/cerrar (ideal para móvil)
 local MinimizeButton = Instance.new("ImageButton")
-MinimizeButton.Size = UDim2.new(0, 60, 0, 60)
-MinimizeButton.Position = UDim2.new(0, 20, 0, 20)
-MinimizeButton.BackgroundColor3 = Color3.fromRGB(0, 170, 255)
-MinimizeButton.Image = "rbxassetid://3926305904" -- Icono de pez
+MinimizeButton.Size = UDim2.new(0, 65, 0, 65)
+MinimizeButton.Position = UDim2.new(0, 25, 0, 25)
+MinimizeButton.BackgroundColor3 = Color3.fromRGB(170, 0, 255)
+MinimizeButton.Image = "rbxassetid://3926305904"
 MinimizeButton.Parent = ScreenGui
 
-local corner = Instance.new("UICorner")
-corner.CornerRadius = UDim.new(0, 30)
-corner.Parent = MinimizeButton
+local cornerMin = Instance.new("UICorner")
+cornerMin.CornerRadius = UDim.new(1, 0)
+cornerMin.Parent = MinimizeButton
 
--- Main Frame
 local MainFrame = Instance.new("Frame")
-MainFrame.Size = UDim2.new(0, 380, 0, 520)
-MainFrame.Position = UDim2.new(0.5, -190, 0.5, -260)
-MainFrame.BackgroundColor3 = Color3.fromRGB(25, 25, 35)
+MainFrame.Size = UDim2.new(0, 420, 0, 620)
+MainFrame.Position = UDim2.new(0.5, -210, 0.5, -310)
+MainFrame.BackgroundColor3 = Color3.fromRGB(15, 15, 25)
 MainFrame.BorderSizePixel = 0
 MainFrame.Visible = true
 MainFrame.Parent = ScreenGui
 
 local mainCorner = Instance.new("UICorner")
-mainCorner.CornerRadius = UDim.new(0, 15)
+mainCorner.CornerRadius = UDim.new(0, 16)
 mainCorner.Parent = MainFrame
 
 local title = Instance.new("TextLabel")
-title.Text = "🐟 Fisch Farm - Mobile"
-title.Size = UDim2.new(1, 0, 0, 50)
+title.Text = "🐟 FISCH HUB"
+title.Size = UDim2.new(1, 0, 0, 60)
 title.BackgroundTransparency = 1
-title.TextColor3 = Color3.fromRGB(0, 170, 255)
+title.TextColor3 = Color3.fromRGB(255, 255, 255)
 title.Font = Enum.Font.GothamBold
-title.TextSize = 24
+title.TextSize = 28
 title.Parent = MainFrame
 
--- ScrollingFrame con tabs simples
+local titleGradient = Instance.new("UIGradient")
+titleGradient.Color = ColorSequence.new{
+    ColorSequenceKeypoint.new(0, Color3.fromRGB(170, 0, 255)),
+    ColorSequenceKeypoint.new(1, Color3.fromRGB(0, 255, 170))
+}
+titleGradient.Parent = title
+
 local Scroll = Instance.new("ScrollingFrame")
-Scroll.Size = UDim2.new(1, -20, 1, -70)
-Scroll.Position = UDim2.new(0, 10, 0, 60)
+Scroll.Size = UDim2.new(1, -20, 1, -80)
+Scroll.Position = UDim2.new(0, 10, 0, 70)
 Scroll.BackgroundTransparency = 1
 Scroll.ScrollBarThickness = 6
+Scroll.ScrollBarImageColor3 = Color3.fromRGB(170, 0, 255)
 Scroll.Parent = MainFrame
 
 local listLayout = Instance.new("UIListLayout")
-listLayout.Padding = UDim.new(0, 8)
+listLayout.Padding = UDim.new(0, 10)
+listLayout.SortOrder = Enum.SortOrder.LayoutOrder
 listLayout.Parent = Scroll
 
--- Función para crear toggle fácil
+-- ==================== TOGGLE ESTILO ====================
 local function CreateToggle(text, callback)
     local toggleFrame = Instance.new("Frame")
-    toggleFrame.Size = UDim2.new(1, 0, 0, 60)
-    toggleFrame.BackgroundColor3 = Color3.fromRGB(40, 40, 55)
-    toggleFrame.Parent = Scroll
-    
-    local togCorner = Instance.new("UICorner")
-    togCorner.CornerRadius = UDim.new(0, 10)
-    togCorner.Parent = toggleFrame
-    
-    local label = Instance.new("TextLabel")
-    label.Text = text
-    label.Size = UDim2.new(0.7, 0, 1, 0)
-    label.BackgroundTransparency = 1
-    label.TextColor3 = Color3.new(1,1,1)
-    label.Font = Enum.Font.GothamSemibold
-    label.TextSize = 20
-    label.TextXAlignment = Enum.TextXAlignment.Left
-    label.Parent = toggleFrame
-    
-    local button = Instance.new("TextButton")
-    button.Size = UDim2.new(0, 80, 0, 40)
-    button.Position = UDim2.new(1, -90, 0.5, -20)
-    button.BackgroundColor3 = Color3.fromRGB(0, 170, 255)
-    button.Text = "OFF"
-    button.TextColor3 = Color3.new(1,1,1)
-    button.Font = Enum.Font.GothamBold
-    button.TextSize = 18
-    button.Parent = toggleFrame
-    
-    local btnCorner = Instance.new("UICorner")
-    btnCorner.CornerRadius = UDim.new(0, 20)
-    btnCorner.Parent = button
-    
-    local enabled = false
-    button.MouseButton1Click:Connect(function()
-        enabled = not enabled
-        button.Text = enabled and "ON" or "OFF"
-        button.BackgroundColor3 = enabled and Color3.fromRGB(0, 255, 100) or Color3.fromRGB(0, 170, 255)
-        callback(enabled)
-    end)
-    
-    return toggleFrame
-end
-
--- ==================== VARIABLES DE FARM ====================
-local autoFarmEnabled = false
-local autoSellEnabled = false
-local autoBuyRodsEnabled = false
-
--- ==================== LÓGICA DEL AUTO FARM ====================
-local function SimulateCast()
-    -- Simula lanzar la caña (mantén y suelta clic)
-    VirtualInputManager:SendMouseButtonEvent(500, 500, 0, true, game, 0) -- left click down
-    wait(1.2) -- potencia de lanzamiento
-    VirtualInputManager:SendMouseButtonEvent(500, 500, 0, false, game, 0) -- release
-end
-
-local function SimulateShakeReel()
-    -- Simula sacudidas y recogida cuando muerde el pez
-    for i = 1, 8 do
-        VirtualInputManager:SendMouseButtonEvent(500, 500, 0, true, game, 0)
-        wait(0.08)
-        VirtualInputManager:SendMouseButtonEvent(500, 500, 0, false, game, 0)
-        wait(0.15)
-    end
-end
-
-RunService.Heartbeat:Connect(function()
-    if not autoFarmEnabled then return end
-    
-    -- Auto Cast + Shake + Reel (loop básico pero efectivo)
-    if character:FindFirstChild("FishingRod") or player.Backpack:FindFirstChild("FishingRod") then
-        SimulateCast()
-        wait(3) -- espera a que muerda
-        SimulateShakeReel()
-        wait(2)
-    end
-end)
-
--- Auto Sell (cada 30 segundos)
-spawn(function()
-    while wait(30) do
-        if autoSellEnabled then
-            -- Intenta vender todo (ajusta si tu executor tiene getgenv)
-            for _, fish in ipairs(player.Backpack:GetChildren()) do
-                if fish.Name:find("Fish") or fish.Name:find("Catch") then
-                    -- Lógica de venta (el juego tiene remote, pero simulamos click en tienda si estás cerca)
-                end
-            end
-        end
-    end
-end)
-
--- ==================== TOGGLES DE LA GUI ====================
-CreateToggle("Auto Farm Completo (Cast + Shake + Reel)", function(state)
-    autoFarmEnabled = state
-end)
-
-CreateToggle("Auto Sell Todo", function(state)
-    autoSellEnabled = state
-end)
-
-CreateToggle("Auto Comprar Todas las Cañas", function(state)
-    autoBuyRodsEnabled = state
-    if state then
-        print("Auto Buy Rods activado - ve a la tienda")
-        -- Aquí puedes agregar teleports a la tienda si quieres
-    end
-end)
-
-CreateToggle("WalkSpeed Rápido (Móvil)", function(state)
-    if character and character:FindFirstChild("Humanoid") then
-        character.Humanoid.WalkSpeed = state and 50 or 16
-    end
-end)
-
-CreateToggle("Jump Alto (Móvil)", function(state)
-    if character and character:FindFirstChild("Humanoid") then
-        character.Humanoid.JumpPower = state and 80 or 50
-    end
-end)
-
--- Botón Minimize / Close
-MinimizeButton.MouseButton1Click:Connect(function()
-    MainFrame.Visible = not MainFrame.Visible
-end)
-
--- Hacer el frame arrastrable (perfecto para móvil)
-local dragging, dragInput, dragStart, startPos
-MainFrame.InputBegan:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1 then
-        dragging = true
-        dragStart = input.Position
-        startPos = MainFrame.Position
-    end
-end)
-
-MainFrame.InputChanged:Connect(function(input)
-    if dragging and input.UserInputType == Enum.UserInputType.MouseMovement then
-        dragInput = input
-    end
-end)
-
-game:GetService("UserInputService").InputChanged:Connect(function(input)
-    if input == dragInput and dragging then
-        local delta = input.Position - dragStart
-        MainFrame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
-    end
-end)
-
-print("✅ Fisch Farm Script cargado correctamente! Disfruta farmeando en tu celular 🐟")
+    toggleFrame.Size = UDim2.new(1, 0, 0, 65)
+    toggleFrame.BackgroundColor3 = Color3.fromRGB(25, 25, 40)
+    toggleFrame.Parent
