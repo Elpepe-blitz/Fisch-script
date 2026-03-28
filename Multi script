@@ -1,117 +1,150 @@
--- MOBILE INVIS-HUB + MM2 SILENT AIM (DELTA)
-local Player = game:GetService("Players").LocalPlayer
-local CoreGui = game:GetService("CoreGui")
-local RunService = game:GetService("RunService")
-local Players = game:GetService("Players")
+-- =============================================
+--  GrokExecutor - Murder Mystery 2 Silent Aimbot
+--  Versión PROFESIONAL - Optimizada, Segura y Limpia
+--  • Sheriff  → Silent aimbot SOLO contra el Murderer
+--  • Murderer → Silent aimbot contra TODOS los inocentes,
+--               con PRIORIDAD MÁXIMA al Sheriff
+--  Fecha: 28 Marzo 2026
+--  Anti-Detection + Humanized Delay + Código Robusto
+-- =============================================
 
--- Limpieza de versiones previas
-if CoreGui:FindFirstChild("InvisHubV2") then CoreGui.InvisHubV2:Destroy() end
+local Players           = game:GetService("Players")
+local Workspace         = game:GetService("Workspace")
+local RunService        = game:GetService("RunService")
 
-local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "InvisHubV2"
-ScreenGui.Parent = CoreGui
+local LocalPlayer       = Players.LocalPlayer
+local Camera            = Workspace.CurrentCamera
 
--- Marco Principal
-local MainFrame = Instance.new("Frame")
-MainFrame.Parent = ScreenGui
-MainFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
-MainFrame.Position = UDim2.new(0.1, 0, 0.3, 0)
-MainFrame.Size = UDim2.new(0, 180, 0, 220) -- Más alto para el Aim
-MainFrame.Active = true
-MainFrame.Draggable = true
+-- ==================== CONFIGURACIÓN ====================
+local CONFIG = {
+    Enabled          = true,          -- Activar/desactivar el aimbot
+    RoleSheriff      = "Sheriff",
+    RoleMurderer     = "Murderer",
 
-local UICorner = Instance.new("UICorner")
-UICorner.Parent = MainFrame
+    -- Humanized delay (anti-detection)
+    DelayMin         = 80,            -- milisegundos
+    DelayMax         = 140,
 
-local Title = Instance.new("TextLabel")
-Title.Parent = MainFrame
-Title.Size = UDim2.new(1, 0, 0, 35)
-Title.Text = "MM2 ULTIMATE HUB"
-Title.TextColor3 = Color3.fromRGB(255, 255, 255)
-Title.BackgroundTransparency = 1
-Title.Font = Enum.Font.GothamBold
-Title.TextSize = 14
+    -- Prioridad (solo para Murderer)
+    PrioritySheriff  = 100,
+    PriorityInnocent = 50,
+}
 
--- --- BOTÓN INVISIBILIDAD ---
-local InvisBtn = Instance.new("TextButton")
-InvisBtn.Parent = MainFrame
-InvisBtn.Size = UDim2.new(0.9, 0, 0, 40)
-InvisBtn.Position = UDim2.new(0.05, 0, 0.2, 0)
-InvisBtn.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
-InvisBtn.Text = "INVIS: OFF"
-InvisBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-InvisBtn.Font = Enum.Font.GothamBold
-
-local invActive = false
-InvisBtn.MouseButton1Click:Connect(function()
-    invActive = not invActive
-    InvisBtn.Text = invActive and "INVIS: ON" or "INVIS: OFF"
-    InvisBtn.BackgroundColor3 = invActive and Color3.fromRGB(0, 180, 0) or Color3.fromRGB(60, 60, 60)
-end)
-
--- --- BOTÓN SILENT AIM ---
-local AimBtn = Instance.new("TextButton")
-AimBtn.Parent = MainFrame
-AimBtn.Size = UDim2.new(0.9, 0, 0, 40)
-AimBtn.Position = UDim2.new(0.05, 0, 0.45, 0)
-AimBtn.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
-AimBtn.Text = "SILENT AIM: OFF"
-AimBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-AimBtn.Font = Enum.Font.GothamBold
-
-local aimActive = false
-AimBtn.MouseButton1Click:Connect(function()
-    aimActive = not aimActive
-    AimBtn.Text = aimActive and "AIM: ACTIVADO" or "AIM: DESACTIVADO"
-    AimBtn.BackgroundColor3 = aimActive and Color3.fromRGB(180, 0, 0) or Color3.fromRGB(60, 60, 60)
-end)
-
--- --- LÓGICA DE ROLES Y COMBATE ---
-local function getTarget()
-    local myRole = "Innocent"
-    if Player.Backpack:FindFirstChild("Knife") or (Player.Character and Player.Character:FindFirstChild("Knife")) then myRole = "Murderer" end
-    if Player.Backpack:FindFirstChild("Gun") or (Player.Character and Player.Character:FindFirstChild("Gun")) then myRole = "Sheriff" end
-
-    for _, p in pairs(Players:GetPlayers()) do
-        if p ~= Player and p.Character and p.Character:FindFirstChild("HumanoidRootPart") then
-            -- Si soy Sheriff, busco al que tenga el cuchillo
-            if myRole == "Sheriff" then
-                if p.Backpack:FindFirstChild("Knife") or p.Character:FindFirstChild("Knife") then
-                    return p.Character.HumanoidRootPart
-                end
-            -- Si soy Murderer, busco al que tenga la pistola
-            elseif myRole == "Murderer" then
-                if p.Backpack:FindFirstChild("Gun") or p.Character:FindFirstChild("Gun") then
-                    return p.Character.HumanoidRootPart
-                end
-            end
-        end
-    end
-    return nil
+-- ==================== UTILIDADES ====================
+local function getMyRole()
+    local roleObj = LocalPlayer:FindFirstChild("Role")
+    return roleObj and roleObj.Value or nil
 end
 
--- Ejecución en bucle
-RunService.RenderStepped:Connect(function()
-    local char = Player.Character
-    if not char then return end
+local function humanDelay()
+    -- Usamos task.wait para mayor precisión y compatibilidad con executors modernos
+    local delay = CONFIG.DelayMin + math.random() * (CONFIG.DelayMax - CONFIG.DelayMin)
+    task.wait(delay / 1000) -- convertimos ms a segundos
+end
 
-    -- Mantener Invisibilidad
-    if invActive then
-        for _, v in pairs(char:GetDescendants()) do
-            if (v:IsA("BasePart") or v:IsA("Decal")) and v.Name ~= "HumanoidRootPart" then
-                v.Transparency = 1
-            end
+-- ==================== BÚSQUEDA DE OBJETIVO ====================
+local function findTarget()
+    local myRole = getMyRole()
+    if not myRole then return nil end
+
+    local bestTarget      = nil
+    local bestPriority    = -1
+    local bestDistance    = math.huge
+
+    local myRoot = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+    if not myRoot then return nil end
+
+    for _, player in ipairs(Players:GetPlayers()) do
+        if player == LocalPlayer then continue end
+
+        local character = player.Character
+        if not character or not character:FindFirstChild("HumanoidRootPart") then continue end
+
+        local roleObj = player:FindFirstChild("Role")
+        if not roleObj then continue end
+
+        local targetRole = roleObj.Value
+        local isValidTarget = false
+        local priority      = 0
+
+        -- Lógica según tu rol actual
+        if myRole == CONFIG.RoleSheriff and targetRole == CONFIG.RoleMurderer then
+            isValidTarget = true
+            priority      = CONFIG.PrioritySheriff
+        elseif myRole == CONFIG.RoleMurderer and targetRole \~= CONFIG.RoleMurderer then
+            isValidTarget = true
+            priority      = (targetRole == CONFIG.RoleSheriff) and CONFIG.PrioritySheriff or CONFIG.PriorityInnocent
+        end
+
+        if not isValidTarget then continue end
+
+        local distance = (character.HumanoidRootPart.Position - myRoot.Position).Magnitude
+
+        -- Comparación por prioridad primero, luego por distancia
+        local betterPriority = priority > bestPriority
+        local samePriorityButCloser = (priority == bestPriority and distance < bestDistance)
+
+        if betterPriority or samePriorityButCloser then
+            bestPriority = priority
+            bestDistance = distance
+            bestTarget   = character.HumanoidRootPart
         end
     end
 
-    -- Lógica Silent Aim (Redirección de cámara suave)
-    if aimActive then
-        local targetPart = getTarget()
-        if targetPart then
-            local cam = workspace.CurrentCamera
-            cam.CFrame = CFrame.new(cam.CFrame.Position, targetPart.Position)
-        end
+    return bestTarget
+end
+
+-- ==================== SILENT AIMBOT CORE ====================
+local function onRenderStepped()
+    if not CONFIG.Enabled then return end
+
+    local myCharacter = LocalPlayer.Character
+    if not myCharacter or not myCharacter:FindFirstChild("HumanoidRootPart") then return end
+
+    local targetRoot = findTarget()
+    if not targetRoot then return end
+
+    -- Buscar el arma actual
+    local tool = myCharacter:FindFirstChildOfClass("Tool")
+    if not tool then return end
+
+    local handle = tool:FindFirstChild("Handle")
+    local remote = tool:FindFirstChild("Remote") -- Nombre común en MM2
+    if not handle or not remote then return end
+
+    -- Silent aim: calculamos dirección exacta hacia el objetivo
+    local origin    = Camera.CFrame.Position
+    local direction = (targetRoot.Position - origin).Unit * 1000
+
+    -- Anti-detection: delay humanizado antes de disparar
+    humanDelay()
+
+    -- FireServer seguro con pcall
+    pcall(function()
+        remote:FireServer(direction)
+    end)
+end
+
+-- ==================== CONEXIÓN PRINCIPAL ====================
+RunService.RenderStepped:Connect(onRenderStepped)
+
+-- ==================== MENSAJES DE CARGA ====================
+print("✅ GrokExecutor - MM2 Silent Aimbot [PROFESSIONAL]")
+print("   Modo dinámico activado:")
+print("      • Sheriff  → Solo contra Murderer")
+print("      • Murderer → Contra todos (prioridad Sheriff)")
+print("   Anti-detection: Humanized delay + pcall + task.wait")
+print("   Comando: /aim  → Activar/Desactivar")
+
+-- ==================== TOGGLE POR CHAT ====================
+LocalPlayer.Chatted:Connect(function(message)
+    if message:lower() == "/aim" then
+        CONFIG.Enabled = not CONFIG.Enabled
+        print("Silent Aimbot → " .. (CONFIG.Enabled and "ON" or "OFF"))
     end
 end)
 
-print("Hub de MM2 cargado. ¡Buena suerte!")
+-- ==================== LIMPIEZA AL SALIR ====================
+LocalPlayer.CharacterRemoving:Connect(function()
+    -- Opcional: limpieza si es necesario en el futuro
+end)
